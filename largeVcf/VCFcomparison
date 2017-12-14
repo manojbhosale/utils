@@ -1,0 +1,34 @@
+package com.manoj.ngstools.vcfcompare;
+
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
+
+public class VariantComparison implements Callable<Long>{
+
+	Map<VCFrecord,String> oldMap;
+	Map<VCFrecord,String> newMap;
+	Long tps=0l;
+	
+	public VariantComparison(Map<VCFrecord,String> oldMap, Map<VCFrecord,String> newMap) {
+		this.oldMap = oldMap;
+		this.newMap = newMap; 
+	}
+	
+	@Override
+	public Long call() throws Exception {
+		
+		for(VCFrecord vr : newMap.keySet()) {
+			if(oldMap.containsKey(vr)) {
+				vr.setValidationType("TP");
+				tps++;
+			}
+		}
+		
+		return tps;
+	}
+
+	
+	
+	
+}
