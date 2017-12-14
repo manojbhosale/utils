@@ -1,0 +1,146 @@
+package com.manoj.ngstools.vcfcompare;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFFileReader;
+import htsjdk.variant.vcf.VCFUtils;
+
+public class VcfUtils {
+	private static Map<String, String> CHR_MAP;
+	static {
+		CHR_MAP = new HashMap<>();
+		CHR_MAP.put("1", "chr1");
+		CHR_MAP.put("2", "chr2");
+		CHR_MAP.put("3", "chr3");
+		CHR_MAP.put("4", "chr4");
+		CHR_MAP.put("5", "chr5");
+		CHR_MAP.put("6", "chr6");
+		CHR_MAP.put("7", "chr7");
+		CHR_MAP.put("8", "chr8");
+		CHR_MAP.put("9", "chr9");
+		CHR_MAP.put("10", "chr10");
+		CHR_MAP.put("11", "chr11");
+		CHR_MAP.put("12", "chr12");
+		CHR_MAP.put("13", "chr13");
+		CHR_MAP.put("14", "chr14");
+		CHR_MAP.put("15", "chr15");
+		CHR_MAP.put("16", "chr16");
+		CHR_MAP.put("17", "chr17");
+		CHR_MAP.put("18", "chr18");
+		CHR_MAP.put("19", "chr19");
+		CHR_MAP.put("20", "chr20");
+		CHR_MAP.put("21", "chr21");
+		CHR_MAP.put("22", "chr22");
+		CHR_MAP.put("X", "chrX");
+		CHR_MAP.put("Y", "chrY");
+		CHR_MAP.put("M", "chrM");
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		VcfUtils vcu = new VcfUtils();
+		String[] chrArr = new String[] { "chr1", "chr2" };
+		ExecutorService es = Executors.newFixedThreadPool(2);
+		List<Future<Long>> output = new ArrayList<>();
+		for (String queryChr : chrArr) {
+			List<Map<VCFrecord, String>> vcul = vcu.getVariantMaps(queryChr);
+
+			VariantComparison varCompare = new VariantComparison(vcul.get(0), vcul.get(1));
+
+			Future<Long> res = es.submit(varCompare);
+			output.add(res);
+		}
+		
+		for(Future<Long> afut: output) {
+			System.out.println(afut.get());
+		}
+		es.shutdown();
+	}
+
+	public List<Map<VCFrecord, String>> getVariantMaps(String queryChr) throws Exception {
+		File file1 = new File(
+				"C:\\Manoj\\Progamming\\JAVA\\LargeVcfCompare\\HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_triophased.vcf");
+		long start = System.currentTimeMillis();
+		VCFFileReader reader1 = new VCFFileReader(file1, false);
+		Map<VCFrecord, String> recordsMap = new TreeMap<VCFrecord, String>();
+
+		int snpCount = 0;
+		for (VariantContext vc : reader1) {
+			/*
+			 * if(vc.getType().toString().equals("SNP")) { snpCount++;
+			 * System.out.println(vc); }
+			 */
+
+			if (getChrName(vc.getContig()).equals(queryChr)) {
+
+				String refAllele = (vc.getReference()).toString().replace("*", "");
+				VCFrecord vcr = new VCFrecord(vc.getContig(), refAllele, (vc.getAlternateAllele(0)).toString(),
+						Long.valueOf(vc.getStart()), vc, "FN");
+
+				recordsMap.put(vcr, "1");
+			}
+		}
+		reader1.close();
+
+		File file2 = new File(
+				"C:\\Manoj\\Progamming\\JAVA\\LargeVcfCompare\\HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_triophased.vcf");
+		VCFFileReader reader2 = new VCFFileReader(file2, false);
+		Map<VCFrecord, String> newRecordsMap = new TreeMap<VCFrecord, String>();
+		for (VariantContext vc : reader2) {
+			/*
+			 * if(vc.getType().toString().equals("SNP")) { snpCount++;
+			 * System.out.println(vc); }
+			 */
+
+			if (getChrName(vc.getContig()).equals(queryChr)) {
+
+				String refAllele = (vc.getReference()).toString().replace("*", "");
+				VCFrecord vcr = new VCFrecord(vc.getContig(), refAllele, (vc.getAlternateAllele(0)).toString(),
+						Long.valueOf(vc.getStart()), vc, "FN");
+
+				newRecordsMap.put(vcr, "1");
+			}
+		}
+
+		reader2.close();
+		long stop = System.currentTimeMillis();
+		System.out.println("Size of "+queryChr+ "is" + newRecordsMap.size()+" "+recordsMap.size());
+		
+
+		// System.out.println(recordsMap.size());
+
+		/*
+		 * for(VCFrecord rec : recordsMap.keySet()){ System.out.println(rec); }
+		 */
+		List<Map<VCFrecord, String>> res = new ArrayList<>();
+		res.add(recordsMap);
+		res.add(newRecordsMap);
+
+		return res;
+
+	}
+
+	public static String getChrName(String name) throws Exception {
+
+		if (name.startsWith("chr")) {
+			return name;
+		} else {
+			if (CHR_MAP.containsKey(name)) {
+				return CHR_MAP.get(name);
+			} else {
+				throw new Exception("Chromosome " + name + " is not the standard chromosome !!");
+			}
+		}
+
+	}
+
+}
